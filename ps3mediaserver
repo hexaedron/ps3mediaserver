@@ -1,0 +1,82 @@
+#!/bin/sh
+#
+# description: Starts and stops the ps3mediaserver
+# pidfile: /usr/local/share/pms/ps3mediaserver.pid
+# config:  /usr/local/share/pms/PMS.conf
+
+# Source function library.
+if [ -f /etc/init.d/functions ] ; then
+  . /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ] ; then
+  . /etc/rc.d/init.d/functions
+else
+  exit 1
+fi
+
+# Avoid using root's TMPDIR
+unset TMPDIR
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 1
+
+PROG_NAME='ps3mediaserver'
+PROG_ROOT='/usr/local/share/pms'
+PROG_JAR='pms.jar'
+PROG_EXEC='PMS.sh'
+
+RETVAL=0
+
+start() {
+        KIND="$PROG_NAME"
+        echo -n $"Starting $KIND services: "
+        cd $PROG_ROOT
+        daemon $PROG_ROOT/$PROG_EXEC
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && echo `ps axo pid,args | grep $PROG_JAR | grep -v grep | awk {'print $1'}` > $PROG_ROOT/$PROG_NAME.pid || \
+           RETVAL=1
+           ps axo pid,args | grep $PROG_JAR | grep -v grep | awk {'print $1'} > $PROG_ROOT/$PROG_NAME.pid
+        return $RETVAL
+}
+
+stop() {
+        KIND="$PROG_NAME"
+        echo -n $"Shutting down $KIND services: "
+        killproc -p $PROG_ROOT/$PROG_NAME.pid
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f $PROG_ROOT/$PROG_NAME.pid
+        return $RETVAL
+}
+
+restart() {
+        stop
+        start
+}
+
+rhstatus() {
+        status -p $PROG_ROOT/$PROG_NAME.pid $PROG_NAME
+        return $?
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  status)
+        rhstatus
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        exit 2
+esac
+exit $?
